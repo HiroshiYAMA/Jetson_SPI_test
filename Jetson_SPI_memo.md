@@ -182,12 +182,12 @@ Jetson Xavier NX Developer Kit の場合は **spi2** ではなく **spi3** を�
 ターミナルを 2つ開き、
 ```bash
 # ターミナル 1 (Slave)
-sudo ./spidev_test -D /dev/spidev1.0 -s16500000 -g512 -b32 -H -p0 -n1 -r -zzz
+./spidev_test -D /dev/spidev1.0 -s16500000 -g512 -b32 -H -p0 -n1 -r -zzz
 ```
 で受信待ち。
 ```bash
 # ターミナル 2 (Master)
-sudo ./spidev_test -D /dev/spidev0.0 -s16500000 -g512 -b32 -H -p0 -n1 -zzz -t
+./spidev_test -D /dev/spidev0.0 -s16500000 -g512 -b32 -H -p0 -n1 -zzz -t
 ```
 で送信。
 
