@@ -21,4 +21,5 @@ sudo /opt/nvidia/jetson-io/jetson-io.py
 SPI を Master として使うには基本的に Jetson-IO を使うだけで OK だが、
 Jetson Nano Developer Kit で JetPack 4.6.3 の場合はうまく行かない。
 また、SPI を Slave として使うには追加で設定が必要になる。
+
 詳細は [ここ](Jetson_SPI_memo.md) を参照。
