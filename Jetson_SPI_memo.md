@@ -440,6 +440,83 @@ EE: 7:2 00 00 00 00 00 00 000000
 FF: 7:3 00 00 00 00 00 00 000000
 ```
 
-## SPIスレーブ時の最速通信レートは、
+## SPI通信テスト
+約 10cm 長のジャンパー線で SPI1 と SPI2(又は SPI3)をつないで実施。
+ジャンパー線を長くしすぎたり、数珠つなぎしたりすると
+通信が不安定なるので気をつける。
+
+### SPIスレーブ時(read のみ、write 無し)の最速通信レートは、
 * Jetson Nano Developer Kit : **16.5**MHz
-* Jetson Xavier NX Developer Kit : **33**MHz
+* Jetson Xavier NX Developer Kit : **43**MHz
+
+### SPI通信テスト 全二重 @ Jetson Xavier NX
+
+<ins>
+テストやっててここにあるパラメータどおりの性能が出ず、パケットロスするような状態の時は sudo reboot してみよう。
+</ins>
+
+* Receive (SPI2)
+  * `~/spidev_test -D /dev/spidev2.0 -s12000000 -g16 -b8 -p0 -n1000 -zzz -H`
+    * 送受信(というより送信)を上手く行かせるにはオプション -H が必要
+      * SPI通信モードを mode1 or mode3 にするためのオプション(CPHA)
+    * このオプションを付けないと送信実行時に Invalid argument のエラーになる
+* Send (SPI0)
+  * `~/spidev_test -D /dev/spidev0.0 -s12000000 -g16 -b8 -p0 -n1000 -zzz -H -u 10000`
+    * オプション -u (遅延 μsec)が必要
+* その他のオプション
+  * -D : SPI デバイスファイル
+    * /dev/spidev**N**.**M**
+      * **N** : SPI デバイス番号
+      * **M** : CS(Chip Select)番号
+  * -s : 通信速度(Hz)
+  * -g : 送受信データ長(バイト数)
+  * -b : 文字長(ビット数)
+  * -p0 : データパターン 0
+  * -n : 送受信繰り返し回数
+  * -zzz : デバッグ出力。z を付けるほど出力は詳細になっていく
+
+通信速度は 16.5 MHz まで OK
+
+データ長は
+* -g16 時、-u 1500 くらいまでは短くても送受信 OK
+* -g256 時は -u 6000
+* -g1024 時は -u 9000
+* -g4096 まで OK
+
+データ長 4097以上はカーネルモジュール(spidev)のバッファサイズを越えるので、
+次のいずれかの方法でバッファサイズを増やす。
+* `modprobe` を使う場合
+  * `sudo modprobe spidev bufsiz=20480` とか
+* ***/etc/modules*** ファイルに spidev を登録して起動時にロードする場合
+  * ***/etc/modprobe.d/spidev.conf*** ファイルに
+    * **options spidev bufsiz=20480** とか記述する
+
+-g16384 -u 10000 まで OK  
+-u の値は spidev カーネルモジュール次第のところが多くを占める？  
+-s12000000 -g4096 -u 3000 でも行けたりする時もあるが不安定。
+
+### SPI通信テスト 片方向(SPI0 → SPI2) @ Jetson Xavier NX
+
+* Receive (SPI2)
+  * `~/spidev_test -D /dev/spidev2.0 -s12000000 -g16 -b8 -p0 -n1000 -zzz -H -r`
+    * オプション -H は無くても OK
+* Send (SPI0)
+  * `~/spidev_test -D /dev/spidev0.0 -s12000000 -g16 -b8 -p0 -n1000 -zzz -H -u 10000 -t`
+
+通信速度は 43 MHz まで OK
+
+データ長は
+* -g16 時、-u 1500 くらいまでは短くても受信 OK
+* -g256 時は -u 1500
+* -g1024 時は -u 2000
+* -g4096 時は -u 5000
+* -g16384 時は -u 7000
+
+なんだけど、-zzz でデバッグ出力している分だけ -u の設定値よりも実際は遅くなっている
+
+オプションを -z にしてみると、
+* -g16, -u 1500
+* -g256, -u 1500
+* -g1024, -u 3000
+* -g4096, -u 9000
+* -g16384, -u 10000
